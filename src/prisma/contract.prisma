@@ -1,21 +1,94 @@
 // use prisma-8
 
-model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  username  String?
-  name      String?
-  posts     Post[]
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
+// ------------------------------------------------------
+// ENUMS (Para restringir los valores permitidos)
+// ------------------------------------------------------
+enum PaymentMethod {
+  TRANSFERENCIA
+  CREDITO
+  DEBITO
+  EFECTIVO_LOCAL
 }
 
-model Post {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String?
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  Int
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
+enum PaymentStatus {
+  PENDIENTE
+  COMPLETADO
+  FALLIDO
+}
+
+enum OrderStatus {
+  RECIBIDA
+  EN_PREPARACION
+  EN_CAMINO
+  ENTREGADA
+}
+
+// ------------------------------------------------------
+// MODELOS
+// ------------------------------------------------------
+model User {
+  id      String  @id @onCreate(uuid())
+  name    String
+  address String
+  phone   String
+
+  // Relación: Un usuario puede tener muchas órdenes (1 a N)
+  orders  Order[]
+}
+
+model Order {
+  id          String      @id @onCreate(uuid())
+  totalAmount Float
+  status      OrderStatus @default(RECIBIDA)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @onUpdate(now())
+
+  // Relación con el Usuario (N a 1)
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+
+  // Relación con el Pago (1 a 1)
+  paymentId   String?     @unique
+  payment     Payment?    @relation(fields: [paymentId], references: [id])
+
+  // Relación con los items de la orden (1 a N)
+  items       OrderItem[]
+}
+
+model OrderItem {
+  id        String  @id @onCreate(uuid())
+  quantity  Int
+  unitPrice Float
+  notes     String?
+
+  // Relación con la Orden a la que pertenece (N a 1)
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // Relación con el Producto (N a 1)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Payment {
+  id        String        @id @onCreate(uuid()) // ID de transacción externa
+  method    PaymentMethod
+  status    PaymentStatus @default(PENDIENTE)
+  createdAt DateTime      @default(now())
+
+  // Relación inversa (Prisma la necesita para la relación 1 a 1 con Order)
+  order     Order?
+}
+
+// Modelo base para los productos (Menú)
+model Product {
+  id          String      @id @onCreate(uuid())
+  name        String // Ej. "Perro Especial"
+  description String?
+  price       Float // Precio actual
+  category    String // Ej. "hot_dogs", "picadas"
+  isAvailable Boolean     @default(true)
+
+  // Relación para saber en qué órdenes se ha vendido este producto
+  orderItems  OrderItem[]
 }
