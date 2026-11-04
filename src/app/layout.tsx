@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
+import Providers from "@/components/Provider";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "bot_frontend",
@@ -17,7 +18,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={cn("font-sans", geist.variable)}>
-      <body>{children}</body>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
