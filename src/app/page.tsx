@@ -10,7 +10,6 @@
 //   );
 // }
 
-
 "use client";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -24,7 +23,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { getRespuesta } from "@/controller/chat.controller";
-import { LoaderIcon, Send } from "lucide-react";
+import { LoaderIcon, Send, TimelineIcon, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { useState } from "react";
@@ -33,6 +32,7 @@ import type { Content } from "@google/genai";
 interface ChatMessage {
   user: string;
   bot: string;
+  duration: string;
 }
 
 export default function BubbleDemo() {
@@ -40,7 +40,21 @@ export default function BubbleDemo() {
   const [chatHistory, setChatHistory] = useState<Content[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
-  const [focus, setFocus] = useState(true)
+  const [focus, setFocus] = useState(true);
+
+  const formatDuration = (ms: number) => {
+    if (ms < 1) {
+      return `${ms.toFixed(2)} ms`; // Operaciones extremadamente rápidas (microsegundos)
+    } else if (ms < 1000) {
+      return `${Math.round(ms)} ms`; // Menos de 1 segundo
+    } else if (ms < 60000) {
+      return `${(ms / 1000).toFixed(2)} s`; // Entre 1 segundo y 1 minuto
+    } else {
+      const minutes = Math.floor(ms / 60000);
+      const seconds = ((ms % 60000) / 1000).toFixed(0);
+      return `${minutes}m ${seconds}s`; // Más de 1 minuto
+    }
+  };
 
   const handleSend = async () => {
     const userMsg = inputText.trim();
@@ -50,6 +64,8 @@ export default function BubbleDemo() {
     setLoading(true);
 
     try {
+      const startTime = performance.now();
+
       const res = await getRespuesta(userMsg, chatHistory);
 
       if (res.success && Array.isArray(res.data)) {
@@ -72,6 +88,7 @@ export default function BubbleDemo() {
         // Actualizar el historial que se enviará
         // en la siguiente solicitud.
         setChatHistory(updatedHistory);
+        const duration = Math.round(performance.now() - startTime);
 
         // Actualizar los mensajes visibles.
         setMessages((prev) => [
@@ -79,18 +96,17 @@ export default function BubbleDemo() {
           {
             user: userMsg,
             bot: botResponse,
+            duration: formatDuration(duration)
           },
         ]);
 
         setInputText("");
-
-        console.log("✅ Historial actualizado:", updatedHistory);
-        console.log("📚 Total de mensajes:", updatedHistory.length);
       }
     } catch (error) {
       console.error("❌ Error fetching AI response:", error);
     } finally {
       setLoading(false);
+      setFocus(true);
     }
   };
 
@@ -113,7 +129,10 @@ export default function BubbleDemo() {
                   )}
 
                   {ms.bot && (
-                    <Bubble variant="muted">
+                    <Bubble variant="muted" className="relative">
+                      <span className=" text-xs flex gap-1 font-medium text-nowrap absolute bottom-0 left-full p-2 rounded-full">
+                        <Timer className="size-3" /> {ms.duration}
+                      </span>
                       <BubbleContent>{ms.bot}</BubbleContent>
                     </Bubble>
                   )}
